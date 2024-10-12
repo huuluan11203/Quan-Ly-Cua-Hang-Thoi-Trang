@@ -1,25 +1,39 @@
 package com.ShopManager.user_service.DTO.request;
 
 
+import com.ShopManager.user_service.entity.Gender;
+import com.ShopManager.user_service.entity.Position;
+import com.ShopManager.user_service.entity.Status;
 import com.ShopManager.user_service.validator.DobConstraint;
+import com.ShopManager.user_service.validator.PhoneNumberConstraint;
+import com.ShopManager.user_service.validator.StartDateConstraint;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
 import java.time.LocalDate;
-import java.util.List;
 
-@AllArgsConstructor
-@NoArgsConstructor
 @Data
 @Builder
+@AllArgsConstructor
+@NoArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class UserUpdateRequest {
-    String password;
+
     String firstName;
     String lastName;
+    String gender;
 
-    @DobConstraint(min = 18, message = "INVALID_DOB")
+    @DobConstraint(min = 18)
     LocalDate dob;
 
-    List<String> roles;
+    String CIC;
+
+    @PhoneNumberConstraint()
+    String phoneNumber;
+
+    @StartDateConstraint()
+    LocalDate startDate;
+
+    String status;
+    String position;
 }

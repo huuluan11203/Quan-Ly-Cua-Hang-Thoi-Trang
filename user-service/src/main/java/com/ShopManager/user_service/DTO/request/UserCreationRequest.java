@@ -1,7 +1,11 @@
 package com.ShopManager.user_service.DTO.request;
 
-
-import jakarta.validation.constraints.Size;
+import com.ShopManager.user_service.entity.Gender;
+import com.ShopManager.user_service.entity.Position;
+import com.ShopManager.user_service.entity.Status;
+import com.ShopManager.user_service.validator.DobConstraint;
+import com.ShopManager.user_service.validator.PhoneNumberConstraint;
+import com.ShopManager.user_service.validator.StartDateConstraint;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
@@ -13,14 +17,25 @@ import java.time.LocalDate;
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class UserCreationRequest {
-    @Size(min = 4, message = "USERNAME_INVALID")
-    String username;
-
-    @Size(min = 6, message = "INVALID_PASSWORD")
-    String password;
+    String id;
     String firstName;
     String lastName;
+    String gender;
+    //Gender gender;
 
+    @DobConstraint(min = 18)
     LocalDate dob;
+
+    String CIC;
+
+    @PhoneNumberConstraint()
+    String phoneNumber;
+
+    @StartDateConstraint()
+    LocalDate startDate;
+
+    //Status status;
+    String status;
+    String position;
 
 }

@@ -1,96 +1,89 @@
 package com.ShopManager.user_service.service;
 
-import java.util.HashSet;
-import java.util.List;
-
-import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.security.access.prepost.PostAuthorize;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-
-import  com.ShopManager.user_service.constant.PredefinedRole;
-import  com.ShopManager.user_service.DTO.request.UserCreationRequest;
-import  com.ShopManager.user_service.DTO.request.UserUpdateRequest;
-import  com.ShopManager.user_service.DTO.response.UserResponse;
-import  com.ShopManager.user_service.entity.Role;
-import  com.ShopManager.user_service.entity.User;
-import  com.ShopManager.user_service.exception.AppException;
-import  com.ShopManager.user_service.exception.ErrorCode;
-import  com.ShopManager.user_service.mapper.UserMapper;
-import  com.ShopManager.user_service.repository.RoleRepository;
-import  com.ShopManager.user_service.repository.UserRepository;
-
+import com.ShopManager.user_service.DTO.request.UserCreationRequest;
+import com.ShopManager.user_service.DTO.request.UserUpdateRequest;
+import com.ShopManager.user_service.DTO.response.UserResponse;
+import com.ShopManager.user_service.entity.Gender;
+import com.ShopManager.user_service.entity.Position;
+import com.ShopManager.user_service.entity.Status;
+import com.ShopManager.user_service.entity.User;
+import com.ShopManager.user_service.exception.AppException;
+import com.ShopManager.user_service.exception.ErrorCode;
+import com.ShopManager.user_service.mapper.UserMapper;
+import com.ShopManager.user_service.repository.PositionRepository;
+import com.ShopManager.user_service.repository.UserRepository;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.prepost.PostAuthorize;
+import org.springframework.stereotype.Service;
 
+
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
-@Slf4j
 public class UserService {
     UserRepository userRepository;
-    RoleRepository roleRepository;
+    PositionRepository positionRepository;
     UserMapper userMapper;
-    PasswordEncoder passwordEncoder;
 
     public UserResponse createUser(UserCreationRequest request) {
+
+        if (userRepository.existsByCIC(request.getCIC()))
+            throw new AppException(ErrorCode.CIC_USED);
+
         User user = userMapper.toUser(request);
-        user.setPassword(passwordEncoder.encode(request.getPassword()));
+        // Position position = positionRepository.findById(PredefinedPosition.SALES_ASSOCIATE_POSITION).get();
+        Position position = positionRepository.findById(request.getPosition())
+                .orElseThrow(() -> new AppException(ErrorCode.POSITION_NOT_FOUND));
 
-        HashSet<Role> roles = new HashSet<>();
-        roleRepository.findById(PredefinedRole.USER_ROLE).ifPresent(roles::add);
+        Gender gender = Gender.toEnum(request.getGender());
+        Status status = Status.toEnum(request.getStatus());
 
-        user.setRoles(roles);
-
-        try {
-            user = userRepository.save(user);
-        } catch (DataIntegrityViolationException exception) {
-            throw new AppException(ErrorCode.USER_EXISTED);
-        }
-
-        return userMapper.toUserResponse(user);
-    }
-
-    public UserResponse getMyInfo() {
-        var context = SecurityContextHolder.getContext();
-        String name = context.getAuthentication().getName();
-
-        User user = userRepository.findByUsername(name).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+        user.setPosition(position);
+        user.setStatus(status);
+        user.setGender(gender);
+        user = userRepository.save(user);
 
         return userMapper.toUserResponse(user);
     }
 
-    @PostAuthorize("returnObject.username == authentication.name")
+    public UserResponse getMyInfo(String userId){
+//        Optional<User> userOptional = userRepository.findById(userId);
+//        if (userOptional.isPresent()){
+//            User user = userOptional.get();
+//            return userMapper.toUserResponse(user);
+//        }else {
+//            throw new AppException(ErrorCode.USER_NOT_EXISTED);
+//        }
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+        return userMapper.toUserResponse(user);
+    }
+
+    @PostAuthorize("returnObject.id == authentication.id")
     public UserResponse updateUser(String userId, UserUpdateRequest request) {
-        User user = userRepository.findById(userId).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+        Position position = positionRepository.findById(request.getPosition())
+                .orElseThrow(() -> new AppException(ErrorCode.POSITION_NOT_FOUND));
+
+        Gender gender = Gender.toEnum(request.getGender());
+        Status status = Status.toEnum(request.getStatus());
 
         userMapper.updateUser(user, request);
-        user.setPassword(passwordEncoder.encode(request.getPassword()));
-
-        var roles = roleRepository.findAllById(request.getRoles());
-        user.setRoles(new HashSet<>(roles));
+        user.setPosition(position);
+        user.setStatus(status);
+        user.setGender(gender);
 
         return userMapper.toUserResponse(userRepository.save(user));
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
-    public void deleteUser(String userId) {
+    public void deleteUser(String userId){
         userRepository.deleteById(userId);
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
-    public List<UserResponse> getUsers() {
-        log.info("In method get Users");
-        return userRepository.findAll().stream().map(userMapper::toUserResponse).toList();
-    }
-
-    @PreAuthorize("hasRole('ADMIN')")
-    public UserResponse getUser(String id) {
-        return userMapper.toUserResponse(
-                userRepository.findById(id).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED)));
-    }
 }

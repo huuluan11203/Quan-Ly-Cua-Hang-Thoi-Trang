@@ -1,5 +1,6 @@
 package com.ShopManager.user_service.exception;
 
+
 public class AppException extends RuntimeException {
 
     public AppException(ErrorCode errorCode) {
